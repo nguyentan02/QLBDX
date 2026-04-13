@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Card, message, Modal, Select, Tag, Input } from 'antd';
+import { Table, Button, Card, message, Modal, Select, Tag, Input, Alert } from 'antd';
 import { AxiosError } from 'axios';
 import api from '../api/axios';
 import { ParkingRecord, ParkingExitRequest } from '../types';
@@ -15,13 +15,21 @@ interface ExitResponse {
   };
 }
 
+interface PreviewFee {
+  fee: number;
+  hasPackage: boolean;
+  durationMinutes: number;
+  packageEndDate?: string | null;
+  daysUntilExpiry?: number | null;
+}
+
 const ParkingExit: React.FC = () => {
   const [records, setRecords] = useState<ParkingRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [exitModal, setExitModal] = useState<ParkingRecord | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
   const [searchPlate, setSearchPlate] = useState<string>('');
-  const [previewFee, setPreviewFee] = useState<{ fee: number; hasPackage: boolean; durationMinutes: number } | null>(null);
+  const [previewFee, setPreviewFee] = useState<PreviewFee | null>(null);
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
 
   const fetchRecords = async () => {
@@ -128,6 +136,29 @@ const ParkingExit: React.FC = () => {
                       {previewFee.hasPackage ? 'Miễn phí (có gói)' : `${Number(previewFee.fee).toLocaleString()}đ`}
                     </span>
                   </div>
+                  {previewFee.hasPackage && previewFee.daysUntilExpiry !== null && previewFee.daysUntilExpiry !== undefined && (
+                    previewFee.daysUntilExpiry === 0 ? (
+                      <Alert
+                        type="error"
+                        showIcon
+                        message="Gói hết hạn hôm nay!"
+                        description="Đây là lần sử dụng cuối. Nhắc khách gia hạn gói để tiếp tục miễn phí."
+                        style={{ marginTop: 12, borderRadius: 6 }}
+                      />
+                    ) : previewFee.daysUntilExpiry <= 7 ? (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        message={`Gói sắp hết hạn — còn ${previewFee.daysUntilExpiry} ngày`}
+                        description={`Hết hạn ngày ${
+                          previewFee.packageEndDate
+                            ? new Date(previewFee.packageEndDate).toLocaleDateString('vi-VN')
+                            : ''
+                        }. Nhắc khách hàng gia hạn sớm.`}
+                        style={{ marginTop: 12, borderRadius: 6 }}
+                      />
+                    ) : null
+                  )}
                 </>
               )}
             </div>

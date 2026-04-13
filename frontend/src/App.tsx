@@ -19,6 +19,7 @@ import Users from './pages/Users';
 import Reports from './pages/Reports';
 import VehicleTypes from './pages/VehicleTypes';
 import Profile from './pages/Profile';
+import ActivityLogs from './pages/ActivityLogs';
 
 interface PrivateRouteProps {
   children: ReactNode;
@@ -28,6 +29,18 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
   return user ? <>{children}</> : <Navigate to="/login" />;
+};
+
+interface AdminRouteProps {
+  children: ReactNode;
+}
+
+const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" />;
+  if (user.role !== 'admin') return <Navigate to="/" />;
+  return <>{children}</>;
 };
 
 const App: React.FC = () => {
@@ -78,6 +91,7 @@ const App: React.FC = () => {
               <Route path="users" element={<Users />} />
               <Route path="reports" element={<Reports />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="activity-logs" element={<AdminRoute><ActivityLogs /></AdminRoute>} />
             </Route>
           </Routes>
         </BrowserRouter>

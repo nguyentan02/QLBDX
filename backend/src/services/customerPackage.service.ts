@@ -93,11 +93,20 @@ export class CustomerPackageService {
       include: {
         parkingPackage: { select: { name: true } },
       },
+      orderBy: { endDate: 'asc' },
     });
+
+    const daysUntilExpiry = activePackage
+      ? Math.ceil(
+          (new Date(activePackage.endDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        )
+      : null;
 
     return {
       hasPackage: !!activePackage,
       package: activePackage ?? null,
+      daysUntilExpiry,
+      isExpiringSoon: daysUntilExpiry !== null && daysUntilExpiry <= 7,
     };
   }
 }

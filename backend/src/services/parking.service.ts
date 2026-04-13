@@ -39,6 +39,27 @@ export class ParkingService {
       throw { status: 400, message: 'Xe này đang đỗ trong bãi' };
     }
 
+    // Check if the entire lot is full (has spots configured but none available)
+    const [totalSpots, availableSpots] = await Promise.all([
+      prisma.parkingSpot.count(),
+      prisma.parkingSpot.count({ where: { status: 'available' } }),
+    ]);
+
+    if (totalSpots > 0 && availableSpots === 0) {
+      throw { status: 400, message: 'Bãi đỗ xe đã đầy, không thể nhận thêm xe' };
+    }
+
+    // If a specific spot was requested, verify it is still available
+    if (data.parkingSpotId) {
+      const spot = await prisma.parkingSpot.findUnique({
+        where: { id: data.parkingSpotId },
+        select: { status: true, spotNumber: true },
+      });
+      if (!spot || spot.status !== 'available') {
+        throw { status: 400, message: `Chỗ đỗ này đã được sử dụng hoặc không khả dụng` };
+      }
+    }
+
     // Check if vehicle exists in system
     const vehicle = await prisma.vehicle.findUnique({
       where: { licensePlate: data.licensePlate },
@@ -179,6 +200,8 @@ export class ParkingService {
 
     let fee = 0;
     let hasPackage = false;
+    let packageEndDate: Date | null = null;
+    let daysUntilExpiry: number | null = null;
 
     if (record.vehicleId) {
       const today = new Date();
@@ -190,8 +213,15 @@ export class ParkingService {
           startDate: { lte: today },
           endDate: { gte: today },
         },
+        orderBy: { endDate: 'asc' },
       });
       hasPackage = !!pkgCheck;
+      if (pkgCheck) {
+        packageEndDate = new Date(pkgCheck.endDate);
+        daysUntilExpiry = Math.ceil(
+          (packageEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        );
+      }
     }
 
     if (!hasPackage) {
@@ -205,7 +235,7 @@ export class ParkingService {
       }
     }
 
-    return { fee, hasPackage, durationMinutes };
+    return { fee, hasPackage, durationMinutes, packageEndDate, daysUntilExpiry };
   }
 
   async history(from?: string, to?: string, licensePlate?: string) {

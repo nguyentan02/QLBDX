@@ -11,6 +11,7 @@ import parkingZoneRoutes from './parkingZone.routes';
 import parkingSpotRoutes from './parkingSpot.routes';
 import paymentRoutes from './payment.routes';
 import reportRoutes from './report.routes';
+import activityLogRoutes from './activityLog.routes';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/parking-zones', parkingZoneRoutes);
 router.use('/parking-spots', parkingSpotRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/reports', reportRoutes);
+router.use('/activity-logs', activityLogRoutes);
 
 export default router;

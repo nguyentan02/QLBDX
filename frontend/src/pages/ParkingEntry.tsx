@@ -1,26 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Select, Button, Card, message, Row, Col, Tag, Table } from 'antd';
+import { Form, Input, Select, Button, Card, message, Row, Col, Tag, Table, Alert } from 'antd';
+import { WarningOutlined } from '@ant-design/icons';
 import { AxiosError } from 'axios';
 import api from '../api/axios';
-import { VehicleType, ParkingSpot, Vehicle, ParkingEntryForm, ParkingRecord } from '../types';
+import { VehicleType, ParkingSpot, Vehicle, ParkingEntryForm, ParkingRecord, PackageCheckResult } from '../types';
 
 const ParkingEntry: React.FC = () => {
   const [form] = Form.useForm<ParkingEntryForm>();
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
+  const [totalSpots, setTotalSpots] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [vehicleInfo, setVehicleInfo] = useState<Vehicle | null>(null);
+  const [packageCheck, setPackageCheck] = useState<PackageCheckResult | null>(null);
   const [parkedRecords, setParkedRecords] = useState<ParkingRecord[]>([]);
 
   const fetchData = async () => {
     try {
-      const [vtRes, spRes, prRes] = await Promise.all([
+      const [vtRes, spRes, allSpRes, prRes] = await Promise.all([
         api.get<VehicleType[]>('/vehicle-types'),
         api.get<ParkingSpot[]>('/parking-spots', { params: { status: 'available' } }),
+        api.get<ParkingSpot[]>('/parking-spots'),
         api.get<ParkingRecord[]>('/parking', { params: { status: 'parked' } }),
       ]);
       setVehicleTypes(vtRes.data);
       setSpots(spRes.data);
+      setTotalSpots(allSpRes.data.length);
       setParkedRecords(prRes.data);
     } catch (err) {
       console.error(err);
@@ -41,8 +46,16 @@ const ParkingEntry: React.FC = () => {
       setVehicleInfo(res.data);
       form.setFieldsValue({ vehicleTypeId: res.data.vehicleTypeId });
       message.info(`Xe của: ${res.data.customer?.fullName || 'Không rõ'}`);
+      // Check package expiry for this vehicle
+      try {
+        const pkgRes = await api.get<PackageCheckResult>(`/customer-packages/check/${res.data.id}`);
+        setPackageCheck(pkgRes.data);
+      } catch {
+        setPackageCheck(null);
+      }
     } catch {
       setVehicleInfo(null);
+      setPackageCheck(null);
     }
   };
 
@@ -53,6 +66,7 @@ const ParkingEntry: React.FC = () => {
       message.success('Ghi nhận xe vào thành công!');
       form.resetFields();
       setVehicleInfo(null);
+      setPackageCheck(null);
       fetchData();
     } catch (err) {
       const error = err as AxiosError<{ message: string }>;
@@ -63,6 +77,7 @@ const ParkingEntry: React.FC = () => {
   };
 
   const zoneGroups = Array.from(new Set(spots.map(s => s.zone?.name))).filter(Boolean);
+  const isFull = totalSpots > 0 && spots.length === 0;
 
   const parkedColumns = [
     { title: 'Biển số', dataIndex: 'licensePlate', key: 'licensePlate', render: (t: string) => <Tag className="plate-tag">{t}</Tag> },
@@ -82,6 +97,28 @@ const ParkingEntry: React.FC = () => {
   return (
     <div>
       <h2 className="page-title">Ghi nhận xe vào</h2>
+
+      {isFull && (
+        <Alert
+          type="error"
+          showIcon
+          icon={<WarningOutlined />}
+          message="Bãi đỗ xe đã đầy"
+          description={`Tất cả ${totalSpots} ô đậu đều đang được sử dụng. Không thể nhận thêm xe cho đến khi có xe ra.`}
+          style={{ marginBottom: 20, borderRadius: 8 }}
+        />
+      )}
+
+      {packageCheck && packageCheck.hasPackage && packageCheck.isExpiringSoon && (
+        <Alert
+          type="warning"
+          showIcon
+          message={`Gói dịch vụ sắp hết hạn — còn ${packageCheck.daysUntilExpiry} ngày`}
+          description={`Gói "${packageCheck.package?.parkingPackage?.name || 'vé tháng'}" hết hạn vào ${new Date(packageCheck.package!.endDate).toLocaleDateString('vi-VN')}. Vui lòng nhắc khách hàng gia hạn để tránh bị tính phí.`}
+          style={{ marginBottom: 20, borderRadius: 8 }}
+        />
+      )}
+
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={14}>
           <Card>
@@ -108,8 +145,17 @@ const ParkingEntry: React.FC = () => {
                 <Input.TextArea rows={2} placeholder="Ghi chú thêm..." />
               </Form.Item>
               <Form.Item style={{ marginBottom: 0 }}>
-                <Button type="primary" htmlType="submit" loading={loading} size="large" block style={{ height: 48, fontWeight: 600 }}>
-                  Ghi nhận xe vào
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  disabled={isFull}
+                  size="large"
+                  block
+                  style={{ height: 48, fontWeight: 600 }}
+                  danger={isFull}
+                >
+                  {isFull ? 'Bãi đầy — Không thể nhận xe' : 'Ghi nhận xe vào'}
                 </Button>
               </Form.Item>
             </Form>
@@ -128,7 +174,17 @@ const ParkingEntry: React.FC = () => {
           )}
           <Card>
             <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 16 }}>Chỗ đỗ trống</div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 16 }}>{spots.length}</div>
+            <div style={{
+              fontSize: '2rem',
+              fontWeight: 700,
+              color: isFull ? 'var(--error)' : spots.length <= Math.ceil(totalSpots * 0.1) ? 'var(--warning)' : 'var(--primary)',
+              marginBottom: 16,
+            }}>
+              {spots.length}
+              <span style={{ fontSize: '1rem', fontWeight: 400, color: 'var(--on-surface-variant)', marginLeft: 8 }}>
+                / {totalSpots}
+              </span>
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {zoneGroups.map(zone => (
                 <Tag key={zone} className="chip-available" style={{ borderRadius: 9999 }}>{zone}: {spots.filter(s => s.zone?.name === zone).length}</Tag>
