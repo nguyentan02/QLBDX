@@ -170,6 +170,23 @@ CREATE TABLE Payments (
 );
 
 -- =============================================
+-- 11. User Activity Logs (Nhat ky hoat dong)
+-- =============================================
+CREATE TABLE UserActivityLogs (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    UserId INT,                             -- NULL = chua dang nhap (dang nhap that bai)
+    Username NVARCHAR(50) NOT NULL,
+    Action NVARCHAR(30) NOT NULL,           -- LOGIN, LOGIN_FAILED, LOGOUT, CREATE, UPDATE, DELETE
+    Entity NVARCHAR(50),                    -- Users, Customers, Vehicles, ParkingRecords...
+    EntityId INT,                           -- ID ban ghi bi tac dong
+    Details NVARCHAR(1000),                 -- Thong tin bo sung (JSON)
+    IpAddress NVARCHAR(50),
+    StatusCode INT,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    FOREIGN KEY (UserId) REFERENCES Users(Id)
+);
+
+-- =============================================
 -- SEED DATA
 -- =============================================
 

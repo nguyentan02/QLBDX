@@ -15,6 +15,7 @@ import {
   SettingOutlined,
   HistoryOutlined,
   AppstoreOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 
@@ -51,7 +52,10 @@ const MainLayout: React.FC = () => {
     { key: '/payments', icon: <DollarOutlined />, label: 'Thanh toán' },
     { key: '/reports', icon: <BarChartOutlined />, label: 'Báo cáo' },
     ...(user?.role === 'admin'
-      ? [{ key: '/users', icon: <SettingOutlined />, label: 'Người dùng' }]
+      ? [
+          { key: '/users', icon: <SettingOutlined />, label: 'Người dùng' },
+          { key: '/activity-logs', icon: <AuditOutlined />, label: 'Nhật ký hoạt động' },
+        ]
       : []),
   ];
 
@@ -85,7 +89,7 @@ const MainLayout: React.FC = () => {
       <aside className="app-sidebar">
         <div className="sidebar-logo">
           <div className="logo-icon">P</div>
-          <span className="logo-text">ParkManager</span>
+          <span className="logo-text">PSM</span>
         </div>
         <Menu
           mode="inline"

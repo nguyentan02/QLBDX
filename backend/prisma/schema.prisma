@@ -21,6 +21,7 @@ model User {
 
   parkingRecords ParkingRecord[] @relation("CreatedByUser")
   payments       Payment[]       @relation("PaymentCreatedBy")
+  activityLogs   UserActivityLog[]
 
   @@map("Users")
 }
@@ -179,4 +180,21 @@ model Payment {
   creator         User?            @relation("PaymentCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("Payments")
+}
+
+model UserActivityLog {
+  id         Int      @id @default(autoincrement()) @map("Id")
+  userId     Int?     @map("UserId")
+  username   String   @map("Username") @db.NVarChar(50)
+  action     String   @map("Action") @db.NVarChar(30)
+  entity     String?  @map("Entity") @db.NVarChar(50)
+  entityId   Int?     @map("EntityId")
+  details    String?  @map("Details") @db.NVarChar(1000)
+  ipAddress  String?  @map("IpAddress") @db.NVarChar(50)
+  statusCode Int?     @map("StatusCode")
+  createdAt  DateTime @default(now()) @map("CreatedAt")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("UserActivityLogs")
 }

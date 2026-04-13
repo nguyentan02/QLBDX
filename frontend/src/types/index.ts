@@ -253,3 +253,37 @@ export interface UserForm {
   role: string;
   password?: string;
 }
+
+// Customer Package check result
+export interface PackageCheckResult {
+  hasPackage: boolean;
+  package: {
+    id: number;
+    endDate: string;
+    parkingPackage?: { name: string } | null;
+  } | null;
+  daysUntilExpiry: number | null;
+  isExpiringSoon: boolean;
+}
+
+// Activity Log
+export interface ActivityLog {
+  id: number;
+  userId?: number | null;
+  username: string;
+  action: string;
+  entity?: string | null;
+  entityId?: number | null;
+  details?: string | null;
+  ipAddress?: string | null;
+  statusCode?: number | null;
+  createdAt: string;
+  user?: { fullName: string } | null;
+}
+
+export interface ActivityLogPage {
+  data: ActivityLog[];
+  total: number;
+  page: number;
+  limit: number;
+}
