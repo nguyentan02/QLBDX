@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Card, Modal, Form, Select, DatePicker, message, Tag } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, FilterOutlined } from '@ant-design/icons';
 import { AxiosError } from 'axios';
 import dayjs, { Dayjs } from 'dayjs';
 import api from '../api/axios';
@@ -17,12 +17,13 @@ const CustomerPackages: React.FC = () => {
   const [editingPkg, setEditingPkg] = useState<CustomerPackage | null>(null);
   const [editForm] = Form.useForm();
   const [form] = Form.useForm<CustomerPackageForm>();
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const [cpRes, cRes, pRes, vRes] = await Promise.all([
-        api.get<CustomerPackage[]>('/customer-packages'),
+        api.get<CustomerPackage[]>('/customer-packages', { params: { status: statusFilter } }),
         api.get<Customer[]>('/customers'),
         api.get<ParkingPackage[]>('/packages'),
         api.get<Vehicle[]>('/vehicles'),
@@ -38,7 +39,7 @@ const CustomerPackages: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [statusFilter]);
 
   const handleSubmit = async (values: CustomerPackageForm) => {
     try {
@@ -114,7 +115,17 @@ const CustomerPackages: React.FC = () => {
     { title: 'Phương tiện', key: 'vehiclePlate', render: (_: any, r: CustomerPackage) => r.vehicle?.licensePlate || '-' },
     { title: 'Bắt đầu', dataIndex: 'startDate', key: 'startDate', render: (d: string) => dayjs(d).format('DD/MM/YYYY') },
     { title: 'Kết thúc', dataIndex: 'endDate', key: 'endDate', render: (d: string) => dayjs(d).format('DD/MM/YYYY') },
-    { title: 'Trạng thái', dataIndex: 'status', key: 'status', render: (s: string) => s === 'active' ? <Tag className="chip-available">Hoạt động</Tag> : s === 'cancelled' ? <Tag color="red">Đã hủy</Tag> : <Tag>Hết hạn</Tag> },
+    {
+      title: 'Trạng thái', dataIndex: 'status', key: 'status', width: 160, render: (s: string, r: CustomerPackage) => {
+        if (s === 'cancelled') return <Tag color="red">Đã hủy</Tag>;
+        if (s === 'expired') return <Tag>Hết hạn</Tag>;
+        // active - show remaining days
+        const daysLeft = dayjs(r.endDate).diff(dayjs(), 'day');
+        if (daysLeft <= 0) return <Tag>Hết hạn</Tag>;
+        if (daysLeft <= 7) return <Tag color="orange">Còn {daysLeft} ngày</Tag>;
+        return <Tag className="chip-available">Còn {daysLeft} ngày</Tag>;
+      }
+    },
     {
       title: 'Thao tác', key: 'action', width: 160, render: (_: any, r: CustomerPackage) => (
         <div style={{ display: 'flex', gap: 8 }}>
@@ -130,6 +141,17 @@ const CustomerPackages: React.FC = () => {
       <h2 className="page-title">Gói dịch vụ của khách hàng</h2>
       <Card>
         <div className="toolbar">
+          <Select
+            placeholder="Lọc trạng thái"
+            allowClear
+            style={{ width: 200 }}
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v)}
+          >
+            <Select.Option value="active">Đang hoạt động</Select.Option>
+            <Select.Option value="expired">Hết hạn</Select.Option>
+            <Select.Option value="cancelled">Đã hủy</Select.Option>
+          </Select>
           <div className="toolbar-right">
             <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setModal(true); }}>
               Đăng ký gói dịch vụ

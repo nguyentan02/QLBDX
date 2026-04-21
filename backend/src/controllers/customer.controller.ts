@@ -4,7 +4,8 @@ import { customerService } from '../services/customer.service';
 export class CustomerController {
   async findAll(req: Request, res: Response): Promise<void> {
     try {
-      const result = await customerService.findAll(req.query.search as string | undefined);
+      const includeInactive = req.query.includeInactive === 'true';
+      const result = await customerService.findAll(req.query.search as string | undefined, includeInactive);
       res.json(result);
     } catch (err: any) {
       res.status(err.status || 500).json({ message: err.message || 'Lỗi server' });
@@ -41,6 +42,15 @@ export class CustomerController {
   async delete(req: Request, res: Response): Promise<void> {
     try {
       const result = await customerService.softDelete(Number(req.params.id));
+      res.json(result);
+    } catch (err: any) {
+      res.status(err.status || 500).json({ message: err.message || 'Lỗi server' });
+    }
+  }
+
+  async toggleActive(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await customerService.toggleActive(Number(req.params.id));
       res.json(result);
     } catch (err: any) {
       res.status(err.status || 500).json({ message: err.message || 'Lỗi server' });

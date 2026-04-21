@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Card, Modal, Form, Input, Select, message, Popconfirm, Tag } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import { AxiosError } from 'axios';
 import api from '../api/axios';
 import { Vehicle, VehicleType, Customer, VehicleForm } from '../types';
@@ -11,6 +11,8 @@ const Vehicles: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [modal, setModal] = useState<boolean>(false);
+  const [detailModal, setDetailModal] = useState<boolean>(false);
+  const [detailVehicle, setDetailVehicle] = useState<Vehicle | null>(null);
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [form] = Form.useForm<VehicleForm>();
   const [searchPlate, setSearchPlate] = useState<string>('');
@@ -80,6 +82,11 @@ const Vehicles: React.FC = () => {
     }
   };
 
+  const handleViewDetail = (record: Vehicle) => {
+    setDetailVehicle(record);
+    setDetailModal(true);
+  };
+
   const filteredVehicles = vehicles.filter(v =>
     !searchPlate || v.licensePlate.toLowerCase().includes(searchPlate.toLowerCase())
   );
@@ -92,8 +99,9 @@ const Vehicles: React.FC = () => {
     { title: 'Model', dataIndex: 'model', key: 'model', render: (t?: string) => t || '-' },
     { title: 'Màu', dataIndex: 'color', key: 'color', render: (t?: string) => t || '-' },
     {
-      title: 'Thao tác', key: 'action', width: 160, render: (_: any, r: Vehicle) => (
+      title: 'Thao tác', key: 'action', width: 220, render: (_: any, r: Vehicle) => (
         <div style={{ display: 'flex', gap: 8 }}>
+          <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(r)} size="small">Chi tiết</Button>
           <Button icon={<EditOutlined />} onClick={() => handleEdit(r)} size="small">Sửa</Button>
           <Popconfirm title="Xác nhận xóa?" onConfirm={() => handleDelete(r.id)}>
             <Button icon={<DeleteOutlined />} danger size="small">Xóa</Button>
@@ -159,6 +167,40 @@ const Vehicles: React.FC = () => {
             <Input />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Detail Modal */}
+      <Modal
+        title="Chi tiết phương tiện"
+        open={detailModal}
+        onCancel={() => { setDetailModal(false); setDetailVehicle(null); }}
+        footer={<Button onClick={() => setDetailModal(false)}>Đóng</Button>}
+      >
+        {detailVehicle && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ padding: '12px 16px', background: 'var(--surface-variant, #f5f5f5)', borderRadius: 8 }}>
+              <Tag className="plate-tag" style={{ fontSize: 18, padding: '4px 12px' }}>{detailVehicle.licensePlate}</Tag>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <tbody>
+                {[
+                  ['Chủ xe', detailVehicle.customer?.fullName || '-'],
+                  ['Loại xe', detailVehicle.vehicleType?.name || '-'],
+                  ['Hãng xe', detailVehicle.brand || '-'],
+                  ['Model', detailVehicle.model || '-'],
+                  ['Màu sắc', detailVehicle.color || '-'],
+                  ['Ngày tạo', new Date(detailVehicle.createdAt).toLocaleDateString('vi-VN')],
+                  ['Cập nhật', new Date(detailVehicle.updatedAt).toLocaleDateString('vi-VN')],
+                ].map(([label, value]) => (
+                  <tr key={label}>
+                    <td style={{ padding: '8px 0', fontWeight: 500, width: 120, color: '#666' }}>{label}</td>
+                    <td style={{ padding: '8px 0' }}>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Modal>
     </div>
   );

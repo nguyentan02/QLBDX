@@ -12,5 +12,6 @@ router.get('/:id', auth, (req, res) => customerController.findById(req, res));
 router.post('/', auth, activityLogger('Customers'), validate(createCustomerSchema), (req, res) => customerController.create(req, res));
 router.put('/:id', auth, activityLogger('Customers'), validate(updateCustomerSchema), (req, res) => customerController.update(req, res));
 router.delete('/:id', auth, adminOnly, activityLogger('Customers'), (req, res) => customerController.delete(req, res));
+router.patch('/:id/toggle-active', auth, adminOnly, activityLogger('Customers'), (req, res) => customerController.toggleActive(req, res));
 
 export default router;

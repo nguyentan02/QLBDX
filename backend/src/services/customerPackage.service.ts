@@ -3,6 +3,18 @@ import { CreateCustomerPackageInput } from '../validators/customerPackage.valida
 
 export class CustomerPackageService {
   async findAll(customerId?: number, status?: string) {
+    // Auto-expire packages where endDate has passed
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    await prisma.customerPackage.updateMany({
+      where: {
+        status: 'active',
+        endDate: { lt: today },
+      },
+      data: { status: 'expired' },
+    });
+
     return prisma.customerPackage.findMany({
       where: {
         ...(customerId && { customerId }),

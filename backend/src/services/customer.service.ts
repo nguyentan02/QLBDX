@@ -2,10 +2,10 @@ import prisma from '../config/prisma';
 import { CreateCustomerInput, UpdateCustomerInput } from '../validators/customer.validator';
 
 export class CustomerService {
-  async findAll(search?: string) {
+  async findAll(search?: string, includeInactive?: boolean) {
     return prisma.customer.findMany({
       where: {
-        isActive: true,
+        ...(!includeInactive && { isActive: true }),
         ...(search && {
           OR: [
             { fullName: { contains: search } },
@@ -64,6 +64,23 @@ export class CustomerService {
     });
 
     return { message: 'Xóa khách hàng thành công' };
+  }
+
+  async toggleActive(id: number) {
+    const customer = await prisma.customer.findUnique({ where: { id } });
+    if (!customer) {
+      throw { status: 404, message: 'Không tìm thấy khách hàng' };
+    }
+
+    const updated = await prisma.customer.update({
+      where: { id },
+      data: { isActive: !customer.isActive },
+    });
+
+    return {
+      message: updated.isActive ? 'Kích hoạt khách hàng thành công' : 'Vô hiệu hóa khách hàng thành công',
+      isActive: updated.isActive,
+    };
   }
 }
 
